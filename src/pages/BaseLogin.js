@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -8,8 +9,10 @@ import {
   Box,
   Avatar,
 } from '@mui/material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 
 const BaseLogin = ({ title, icon, onLogin, usernameLabel = "Username", passwordLabel = "Password" }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -42,14 +45,23 @@ const BaseLogin = ({ title, icon, onLogin, usernameLabel = "Username", passwordL
           alignItems: 'center',
         }}
       >
-        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-          {icon}
-        </Avatar>
-        <Typography component="h1" variant="h5">
-          {title}
-        </Typography>
-        <Paper elevation={3} sx={{ p: 4, mt: 3, width: '100%' }}>
-          <Box component="form" onSubmit={handleSubmit} noValidate>
+        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Button
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate('/')}
+              sx={{ textTransform: 'none' }}
+            >
+              Go Back
+            </Button>
+            <Avatar sx={{ bgcolor: 'secondary.main' }}>
+              {icon}
+            </Avatar>
+          </Box>
+          <Typography component="h1" variant="h5" align="center" gutterBottom>
+            {title}
+          </Typography>
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             <TextField
               margin="normal"
               required
@@ -80,7 +92,7 @@ const BaseLogin = ({ title, icon, onLogin, usernameLabel = "Username", passwordL
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
             >
-              Sign In
+              Login
             </Button>
           </Box>
         </Paper>

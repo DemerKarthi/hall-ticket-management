@@ -9,18 +9,37 @@ const StudentLogin = () => {
   const handleLogin = (formData) => {
     try {
       // Get students data from localStorage
-      const students = JSON.parse(localStorage.getItem('students') || '[]');
+      const studentsData = localStorage.getItem('students');
+      console.log('Raw students data:', studentsData);
       
-      // Find the student with matching roll number
-      const student = students.find(s => s.rollNumber === formData.username);
+      let students = JSON.parse(studentsData || '[]');
+      console.log('Parsed students array:', students);
+      console.log('Login attempt:', formData);
+
+      // Add default passwords if they don't exist
+      if (students.length > 0 && !students[0].password) {
+        students = students.map(student => ({
+          ...student,
+          password: `student${student.rollNumber.slice(-3)}` // Default password based on roll number
+        }));
+        localStorage.setItem('students', JSON.stringify(students));
+      }
+      
+      // Find the student with matching roll number and password
+      const student = students.find(s => 
+        s.rollNumber === formData.username && 
+        s.password === formData.password
+      );
+      console.log('Found student:', student);
       
       if (student) {
         // Store student data in localStorage for the dashboard
         localStorage.setItem('currentStudent', JSON.stringify(student));
         console.log('Student login successful:', student);
-        navigate('/dashboard');
+        // Navigate to the student dashboard
+        navigate('/student-dashboard');
       } else {
-        alert('Invalid roll number or student not found');
+        alert('Invalid roll number or password');
       }
     } catch (error) {
       console.error('Login error:', error);

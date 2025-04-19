@@ -20,6 +20,8 @@ import {
   Chip,
   Collapse,
   TablePagination,
+  Grid,
+  Pagination,
 } from '@mui/material';
 import {
   Download as DownloadIcon,
@@ -27,7 +29,9 @@ import {
   Person as StaffIcon,
   KeyboardArrowDown as ExpandMoreIcon,
   KeyboardArrowUp as ExpandLessIcon,
+  School as SchoolIcon,
 } from '@mui/icons-material';
+import { jsPDF } from 'jspdf';
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
@@ -59,7 +63,8 @@ const StaffDashboard = () => {
 
   const handleSelectAll = (event) => {
     if (event.target.checked) {
-      setSelectedTickets(hallTickets.map(ticket => ticket.id));
+      const allTicketIds = hallTickets.map(ticket => ticket.id);
+      setSelectedTickets(allTicketIds);
     } else {
       setSelectedTickets([]);
     }
@@ -96,225 +101,403 @@ const StaffDashboard = () => {
 
   const handleDownloadIndividual = (ticket) => {
     const student = students.find(s => s.rollNumber === ticket.studentRollNumber);
-    const ticketWithStudentDetails = {
-      ...ticket,
-      studentDetails: student
-    };
+    
+    const doc = new jsPDF('p', 'mm', 'a4');
+    let yPosition = 20;
+    
+    // Add college header with styling
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Solamalai College of Engineering', 105, yPosition, { align: 'center' });
+    yPosition += 10;
+    
+    doc.setFontSize(16);
+    doc.text('Hall Ticket', 105, yPosition, { align: 'center' });
+    yPosition += 15;
 
-    const blob = new Blob([JSON.stringify(ticketWithStudentDetails, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `hall-ticket-${ticket.studentRollNumber}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+    // Add generation date
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const currentDate = new Date().toLocaleDateString();
+    doc.text(`Generated on: ${currentDate}`, 15, yPosition);
+    yPosition += 15;
 
-  const handleDownloadBulk = () => {
-    if (selectedTickets.length === 0) {
-      alert('Please select at least one hall ticket to download');
-      return;
-    }
+    // Add student details section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Student Details', 15, yPosition);
+    yPosition += 10;
 
-    const selectedTicketsData = hallTickets
-      .filter(ticket => selectedTickets.includes(ticket.id))
-      .map(ticket => {
-        const student = students.find(s => s.rollNumber === ticket.studentRollNumber);
-        return {
-          ...ticket,
-          studentDetails: student
-        };
-      });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Name: ${student?.name || 'N/A'}`, 20, yPosition);
+    yPosition += 7;
+    doc.text(`Roll Number: ${student?.rollNumber || 'N/A'}`, 20, yPosition);
+    yPosition += 7;
+    doc.text(`Department: ${student?.department || 'N/A'}`, 20, yPosition);
+    yPosition += 15;
 
-    const blob = new Blob([JSON.stringify(selectedTicketsData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `bulk-hall-tickets-${new Date().toISOString()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Add exam details section
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Exam Details', 15, yPosition);
+    yPosition += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Exam Name: ${ticket.examName || 'N/A'}`, 20, yPosition);
+    yPosition += 7;
+    doc.text(`Date: ${ticket.examDate || 'N/A'}`, 20, yPosition);
+    yPosition += 7;
+    doc.text(`Time: ${ticket.examTime || 'N/A'}`, 20, yPosition);
+    yPosition += 7;
+    doc.text(`Venue: ${ticket.examVenue || 'N/A'}`, 20, yPosition);
+    yPosition += 15;
+
+    // Add instructions section
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Important Instructions', 15, yPosition);
+    yPosition += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const instructions = [
+      '1. Bring this hall ticket to the examination hall',
+      '2. Carry a valid ID proof',
+      '3. Arrive at least 30 minutes before the exam',
+      '4. Follow all examination rules and regulations'
+    ];
+
+    instructions.forEach(instruction => {
+      doc.text(instruction, 20, yPosition);
+      yPosition += 7;
+    });
+
+    // Add footer
+    doc.setFontSize(8);
+    doc.text('This is a computer-generated hall ticket. No signature required.', 105, 285, { align: 'center' });
+
+    // Save the PDF
+    const fileName = `hall-ticket-${student?.rollNumber || 'unknown'}.pdf`;
+    doc.save(fileName);
   };
 
   const getStudentTickets = (studentRollNumber) => {
     return hallTickets.filter(ticket => ticket.studentRollNumber === studentRollNumber);
   };
 
+  const handleDownloadBulk = () => {
+    const availableTickets = hallTickets.filter(ticket => ticket.status === 'Available');
+    
+    if (availableTickets.length === 0) {
+      alert('No available hall tickets to download');
+      return;
+    }
+
+    const doc = new jsPDF('p', 'mm', 'a4');
+    let yPosition = 20;
+    
+    // Add college header with styling
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Solamalai College of Engineering', 105, yPosition, { align: 'center' });
+    yPosition += 10;
+    
+    doc.setFontSize(16);
+    doc.text('Hall Tickets', 105, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    // Add generation date
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const currentDate = new Date().toLocaleDateString();
+    doc.text(`Generated on: ${currentDate}`, 15, yPosition);
+    yPosition += 15;
+
+    // Add table headers
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Student Name', 15, yPosition);
+    doc.text('Roll No.', 50, yPosition);
+    doc.text('Department', 80, yPosition);
+    doc.text('Exam', 120, yPosition);
+    doc.text('Date', 150, yPosition);
+    doc.text('Time', 170, yPosition);
+    yPosition += 7;
+
+    // Add horizontal line
+    doc.setDrawColor(0, 0, 0);
+    doc.line(15, yPosition, 195, yPosition);
+    yPosition += 10;
+
+    // Add ticket data
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    availableTickets.forEach(ticket => {
+      const student = students.find(s => s.rollNumber === ticket.studentRollNumber);
+      
+      if (yPosition > 270) { // Check if we need a new page
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      // Ensure all values are strings and not undefined/null
+      const studentName = String(student?.name || 'N/A');
+      const rollNumber = String(student?.rollNumber || 'N/A');
+      const department = String(student?.department || 'N/A');
+      const examName = String(ticket.examName || 'N/A');
+      const examDate = String(ticket.examDate || 'N/A');
+      const examTime = String(ticket.examTime || 'N/A');
+
+      doc.text(studentName, 15, yPosition);
+      doc.text(rollNumber, 50, yPosition);
+      doc.text(department, 80, yPosition);
+      doc.text(examName, 120, yPosition);
+      doc.text(examDate, 150, yPosition);
+      doc.text(examTime, 170, yPosition);
+      
+      // Add a light horizontal line between rows
+      doc.setDrawColor(200, 200, 200);
+      doc.line(15, yPosition + 5, 195, yPosition + 5);
+      
+      yPosition += 10;
+    });
+
+    // Add footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+    }
+
+    // Save the PDF
+    const fileName = `hall-tickets-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
-          <Avatar sx={{ bgcolor: 'secondary.main', mr: 2 }}>
-            <StaffIcon />
-          </Avatar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Staff Dashboard
+    <Box sx={{ 
+      flexGrow: 1, 
+      bgcolor: 'background.default', 
+      minHeight: '100vh',
+      py: 4,
+      px: 2
+    }}>
+      <Container maxWidth="lg">
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 4 
+        }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 700,
+              color: 'primary.main',
+              letterSpacing: '-0.5px'
+            }}
+          >
+            Hall Tickets
           </Typography>
-          <Button color="inherit" onClick={handleLogout} startIcon={<LogoutIcon />}>
-            Logout
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            onClick={handleDownloadBulk}
+            sx={{
+              bgcolor: 'primary.main',
+              color: 'white',
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: '1rem',
+              boxShadow: 'none',
+              '&:hover': {
+                bgcolor: 'primary.dark',
+                boxShadow: 'none'
+              }
+            }}
+          >
+            Download All
           </Button>
-        </Toolbar>
-      </AppBar>
+        </Box>
 
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Student Hall Tickets</Typography>
-            <Button
-              variant="contained"
-              startIcon={<DownloadIcon />}
-              onClick={handleDownloadBulk}
-              disabled={selectedTickets.length === 0}
-            >
-              Download Selected
-            </Button>
-          </Box>
+        <Grid container spacing={3}>
+          {students
+            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+            .map((student) => {
+              const studentTickets = getStudentTickets(student.rollNumber);
+              return (
+                <Grid item xs={12} key={student.id}>
+                  <Paper 
+                    elevation={0}
+                    sx={{ 
+                      p: 3,
+                      borderRadius: 3,
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      mb: 2
+                    }}>
+                      <Box>
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            fontWeight: 600,
+                            mb: 0.5,
+                            color: 'text.primary'
+                          }}
+                        >
+                          {student.name}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                          }}
+                        >
+                          <SchoolIcon sx={{ fontSize: 16 }} />
+                          {student.department}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Chip
+                          label={`${studentTickets.length} Ticket${studentTickets.length !== 1 ? 's' : ''}`}
+                          color="primary"
+                          variant="outlined"
+                          sx={{ 
+                            borderColor: 'primary.main',
+                            color: 'primary.main',
+                            fontWeight: 500
+                          }}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => handleExpandRow(student.id)}
+                          sx={{
+                            color: 'primary.main',
+                            '&:hover': {
+                              bgcolor: 'primary.light'
+                            }
+                          }}
+                        >
+                          {expandedRows.includes(student.id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        </IconButton>
+                      </Box>
+                    </Box>
 
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      checked={selectedTickets.length === hallTickets.length}
-                      indeterminate={selectedTickets.length > 0 && selectedTickets.length < hallTickets.length}
-                      onChange={handleSelectAll}
-                    />
-                  </TableCell>
-                  <TableCell>Student Details</TableCell>
-                  <TableCell>Department</TableCell>
-                  <TableCell>Semester</TableCell>
-                  <TableCell>Hall Tickets</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {students
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((student) => {
-                    const studentTickets = getStudentTickets(student.rollNumber);
-                    return (
-                      <React.Fragment key={student.id}>
-                        <TableRow>
-                          <TableCell padding="checkbox">
-                            <Checkbox
-                              checked={studentTickets.every(ticket => selectedTickets.includes(ticket.id))}
-                              onChange={() => {
-                                if (studentTickets.every(ticket => selectedTickets.includes(ticket.id))) {
-                                  setSelectedTickets(prev => prev.filter(id => !studentTickets.map(t => t.id).includes(id)));
-                                } else {
-                                  setSelectedTickets(prev => [...prev, ...studentTickets.map(t => t.id)]);
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleExpandRow(student.id)}
+                    <Collapse in={expandedRows.includes(student.id)} timeout="auto" unmountOnExit>
+                      <Box sx={{ mt: 3 }}>
+                        <Typography 
+                          variant="subtitle1" 
+                          sx={{ 
+                            fontWeight: 600,
+                            mb: 2,
+                            color: 'text.primary'
+                          }}
+                        >
+                          Exam Details
+                        </Typography>
+                        <Grid container spacing={2}>
+                          {studentTickets.map((ticket) => (
+                            <Grid item xs={12} sm={6} key={ticket.id}>
+                              <Paper
+                                elevation={0}
+                                sx={{
+                                  p: 2,
+                                  borderRadius: 2,
+                                  bgcolor: 'background.default',
+                                  border: '1px solid',
+                                  borderColor: 'divider'
+                                }}
                               >
-                                {expandedRows.includes(student.id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                              </IconButton>
-                              <Box>
-                                <Typography variant="subtitle1">{student.name}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  Roll No: {student.rollNumber}
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                    {ticket.examName}
+                                  </Typography>
+                                  <Chip
+                                    label={ticket.status}
+                                    color={ticket.status === 'Available' ? 'success' : 'default'}
+                                    size="small"
+                                    sx={{ 
+                                      fontWeight: 500,
+                                      height: 24
+                                    }}
+                                  />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  Date: {ticket.examDate}
                                 </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                          <TableCell>{student.department}</TableCell>
-                          <TableCell>{student.semester}</TableCell>
-                          <TableCell>
-                            {studentTickets.length > 0 ? (
-                              <Chip
-                                label={`${studentTickets.length} Ticket${studentTickets.length > 1 ? 's' : ''}`}
-                                color="primary"
-                                variant="outlined"
-                              />
-                            ) : (
-                              <Chip label="No Tickets" color="default" variant="outlined" />
-                            )}
-                          </TableCell>
-                          <TableCell align="right">
-                            {studentTickets.length > 0 && (
-                              <IconButton
-                                color="primary"
-                                onClick={() => handleDownloadIndividual(studentTickets[0])}
-                              >
-                                <DownloadIcon />
-                              </IconButton>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-                            <Collapse in={expandedRows.includes(student.id)} timeout="auto" unmountOnExit>
-                              <Box sx={{ margin: 1 }}>
-                                <Typography variant="h6" gutterBottom component="div">
-                                  Hall Tickets
-                                </Typography>
-                                <Table size="small">
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell>Exam Name</TableCell>
-                                      <TableCell>Date</TableCell>
-                                      <TableCell>Status</TableCell>
-                                      <TableCell align="right">Actions</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    {studentTickets.map((ticket) => (
-                                      <TableRow key={ticket.id}>
-                                        <TableCell>{ticket.examName}</TableCell>
-                                        <TableCell>{ticket.examDate}</TableCell>
-                                        <TableCell>
-                                          <Chip
-                                            label={ticket.status}
-                                            color={ticket.status === 'Available' ? 'success' : 'default'}
-                                            size="small"
-                                          />
-                                        </TableCell>
-                                        <TableCell align="right">
-                                          <IconButton
-                                            size="small"
-                                            color="primary"
-                                            onClick={() => handleDownloadIndividual(ticket)}
-                                          >
-                                            <DownloadIcon />
-                                          </IconButton>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </Box>
-                            </Collapse>
-                          </TableCell>
-                        </TableRow>
-                      </React.Fragment>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={students.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                  <Button
+                                    size="small"
+                                    startIcon={<DownloadIcon />}
+                                    onClick={() => handleDownloadIndividual(ticket)}
+                                    sx={{
+                                      textTransform: 'none',
+                                      color: 'primary.main',
+                                      '&:hover': {
+                                        bgcolor: 'primary.light'
+                                      }
+                                    }}
+                                  >
+                                    Download
+                                  </Button>
+                                </Box>
+                              </Paper>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </Box>
+                    </Collapse>
+                  </Paper>
+                </Grid>
+              );
+            })}
+        </Grid>
+
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Pagination
+            count={Math.ceil(students.length / rowsPerPage)}
+            page={page + 1}
+            onChange={(event, value) => handleChangePage(event, value - 1)}
+            color="primary"
+            sx={{
+              '& .MuiPaginationItem-root': {
+                borderRadius: 2,
+                '&.Mui-selected': {
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: 'primary.dark'
+                  }
+                }
+              }
+            }}
           />
-        </Paper>
+        </Box>
       </Container>
     </Box>
   );
 };
 
-export default StaffDashboard; 
+export default StaffDashboard;

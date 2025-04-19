@@ -47,14 +47,6 @@ const Home = () => {
           py: 8
         }}
       >
-        <Typography
-          component="h1"
-          variant="h3"
-          gutterBottom
-          sx={{ mb: 6, color: 'primary.main' }}
-        >
-          Hall Ticket Management System
-        </Typography>
         <Grid container spacing={4} justifyContent="center">
           {portals.map((portal) => {
             const Icon = portal.icon;

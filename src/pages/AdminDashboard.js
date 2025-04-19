@@ -373,6 +373,7 @@ const AdminDashboard = () => {
               boxSizing: 'border-box', 
               width: drawerWidth,
               backgroundColor: theme.palette.background.default,
+              mt: 8,
             },
           }}
         >
@@ -385,6 +386,7 @@ const AdminDashboard = () => {
           flexGrow: 1,
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
+          mt: 8,
         }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
