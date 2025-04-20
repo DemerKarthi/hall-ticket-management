@@ -38,9 +38,18 @@ const CollegeHeader = () => {
         {!isHomePage && (
           <Button
             variant="outlined"
-            color="error"
-            startIcon={<LogoutIcon />}
             onClick={handleLogout}
+            sx={{
+              ml: 2,
+              backgroundColor: 'white',
+              color: '#1976D2',
+              borderColor: '#1976D2',
+              '&:hover': {
+                backgroundColor: '#1976D2',
+                color: 'white',
+                borderColor: '#1976D2',
+              },
+            }}
           >
             Logout
           </Button>

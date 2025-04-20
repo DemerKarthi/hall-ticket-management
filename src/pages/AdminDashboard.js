@@ -6,19 +6,8 @@ import {
   Typography,
   Box,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
   Grid,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Drawer,
   List,
   ListItem,
@@ -27,23 +16,40 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
-  AppBar,
-  Toolbar,
+  Card,
+  CardContent,
+  CardActions,
+  Pagination,
+  Chip,
+  InputAdornment,
+  Alert,
+  Snackbar,
   Avatar,
-  Tabs,
-  Tab,
-  ListItemSecondaryAction,
-  MenuItem,
+  Stack,
+  Tooltip,
+  TextField,
+  Collapse,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import { 
-  Add as AddIcon, 
-  Edit as EditIcon, 
-  Delete as DeleteIcon, 
   Logout as LogoutIcon,
   School as SchoolIcon,
-  People as PeopleIcon,
-  AdminPanelSettings as AdminIcon,
+  Search as SearchIcon,
+  Download as DownloadIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Class as ClassIcon,
+  Assignment as AssignmentIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const drawerWidth = 240;
 
@@ -51,312 +57,490 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [activeTab, setActiveTab] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [exams, setExams] = useState([
-    {
-      id: 1,
-      name: 'Mid Semester Examination',
-      date: '2024-04-15',
-      type: 'Mid Semester',
-      status: 'Pending',
-      subjects: ['Mathematics', 'Physics']
-    },
-    {
-      id: 2,
-      name: 'Final Semester Examination',
-      date: '2024-05-20',
-      type: 'Final Semester',
-      status: 'Available',
-      subjects: ['Chemistry', 'Programming']
-    }
-  ]);
-
-  const [students, setStudents] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      rollNumber: 'STU001',
-      department: 'Computer Science',
-      email: 'john@example.com',
-      hallTickets: [1]
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      rollNumber: 'STU002',
-      department: 'Electrical Engineering',
-      email: 'jane@example.com',
-      hallTickets: [2]
-    }
-  ]);
-
-  const [newExam, setNewExam] = useState({
-    name: '',
-    date: '',
-    type: '',
-    status: 'Pending',
-    subjects: []
-  });
-
-  const [newStudent, setNewStudent] = useState({
-    name: '',
-    rollNumber: '',
-    department: '',
-    email: '',
-    hallTickets: []
-  });
-
-  // Dialog states
-  const [addExamDialog, setAddExamDialog] = useState(false);
-  const [addStudentDialog, setAddStudentDialog] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingExam, setEditingExam] = useState(null);
-  const [editingStudent, setEditingStudent] = useState(null);
-
-  // State for dropdown values
-  const [dropdownValues, setDropdownValues] = useState({
-    examTypes: ['Mid Semester', 'Final Semester', 'Internal Assessment'],
-    departments: ['Computer Science', 'Electrical Engineering', 'Mechanical Engineering'],
-    subjects: ['Mathematics', 'Physics', 'Chemistry', 'Programming'],
-    examStatus: ['Pending', 'Available', 'Completed']
-  });
-
-  const [openDialog, setOpenDialog] = useState(false);
-  const [dialogType, setDialogType] = useState('');
-  const [editingIndex, setEditingIndex] = useState(-1);
-  const [newValue, setNewValue] = useState('');
+  const [students, setStudents] = useState([]);
+  const [hallTickets, setHallTickets] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const itemsPerPage = 6;
+  const [expandedStudents, setExpandedStudents] = useState(new Set());
 
   useEffect(() => {
-    // Check if admin is logged in
     const adminData = JSON.parse(localStorage.getItem('currentAdmin'));
     if (!adminData) {
       navigate('/admin-login');
     }
+
+    const storedStudents = JSON.parse(localStorage.getItem('students')) || [];
+    const storedHallTickets = JSON.parse(localStorage.getItem('hallTickets')) || [];
+    
+    console.log('Loaded Students:', storedStudents);
+    console.log('Loaded Hall Tickets:', storedHallTickets);
+    
+    setStudents(storedStudents);
+    setHallTickets(storedHallTickets);
   }, [navigate]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleAddExam = () => {
-    if (newExam.name && newExam.date && newExam.type) {
-      const exam = {
-        id: exams.length + 1,
-        ...newExam
-      };
-      setExams([...exams, exam]);
-      setNewExam({
-        name: '',
-        date: '',
-        type: '',
-        status: 'Pending',
-        subjects: []
-      });
-    }
-  };
-
-  const handleAddStudent = () => {
-    if (newStudent.name && newStudent.rollNumber && newStudent.department) {
-      const student = {
-        id: students.length + 1,
-        ...newStudent
-      };
-      const updatedStudents = [...students, student];
-      setStudents(updatedStudents);
-      // Store in localStorage
-      localStorage.setItem('students', JSON.stringify(updatedStudents));
-      setNewStudent({
-        name: '',
-        rollNumber: '',
-        department: '',
-        email: '',
-        hallTickets: []
-      });
-    }
-  };
-
-  const handleDeleteExam = (id) => {
-    setExams(exams.filter(exam => exam.id !== id));
-  };
-
-  const handleDeleteStudent = (id) => {
-    const updatedStudents = students.filter(student => student.id !== id);
-    setStudents(updatedStudents);
-    // Update localStorage
-    localStorage.setItem('students', JSON.stringify(updatedStudents));
-  };
-
   const handleLogout = () => {
+    localStorage.removeItem('currentAdmin');
     navigate('/');
   };
 
-  // Edit exam functions
-  const handleEditExam = (exam) => {
-    setEditingExam(exam);
-    setEditDialogOpen(true);
+  const showSnackbar = (message, severity) => {
+    setSnackbar({ open: true, message, severity });
   };
 
-  const handleUpdateExam = () => {
-    if (editingExam) {
-      setExams(exams.map(exam => 
-        exam.id === editingExam.id ? editingExam : exam
-      ));
-      setEditDialogOpen(false);
-      setEditingExam(null);
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  const handleDownloadIndividual = (student) => {
+    const doc = new jsPDF();
+    
+    // Set page size to A4
+    doc.setPage(1);
+    
+    // Add border around the entire page
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.rect(10, 10, 190, 277);
+    
+    // College Header with better styling
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'bold');
+    doc.text('SOLAMALAI COLLEGE OF ENGINEERING', 105, 20, { align: 'center' });
+    
+    // College Address
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text('MADURAI - 625020', 105, 27, { align: 'center' });
+    
+    // Hall Ticket Title with underline
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('HALL TICKET', 105, 40, { align: 'center' });
+    doc.setDrawColor(0, 0, 0);
+    doc.line(80, 42, 130, 42);
+    
+    // Generation Date with better formatting
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 50, { align: 'center' });
+    
+    // Student Details Section
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.text('STUDENT DETAILS', 20, 65);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(9);
+    doc.text(`Name: ${student.name}`, 20, 75);
+    doc.text(`Roll Number: ${student.rollNumber}`, 20, 85);
+    doc.text(`Department: ${student.department}`, 20, 95);
+    
+    const studentTicket = hallTickets.find(ticket => ticket.studentRollNumber === student.rollNumber);
+    
+    if (studentTicket) {
+      // Exam Details Section in table format
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text('EXAM DETAILS', 20, 115);
+      
+      // Draw table header
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.2);
+      doc.line(20, 120, 190, 120); // Top line
+      doc.line(20, 120, 20, 130); // Left line
+      doc.line(190, 120, 190, 130); // Right line
+      doc.line(20, 130, 190, 130); // Bottom line
+      
+      // Draw vertical lines for columns
+      doc.line(70, 120, 70, 130); // First column divider
+      doc.line(120, 120, 120, 130); // Second column divider
+      
+      // Table headers
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text('Exam Name', 45, 125, { align: 'center' });
+      doc.text('Date', 95, 125, { align: 'center' });
+      doc.text('Status', 155, 125, { align: 'center' });
+      
+      // Table content
+      doc.setFont(undefined, 'normal');
+      doc.text(studentTicket.examName, 45, 128, { align: 'center' });
+      doc.text(studentTicket.examDate, 95, 128, { align: 'center' });
+      doc.text(studentTicket.status, 155, 128, { align: 'center' });
+      
+      // Subjects Section
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text('SUBJECTS', 20, 140);
+      
+      // Draw table header for subjects
+      doc.line(20, 145, 190, 145); // Top line
+      doc.line(20, 145, 20, 155); // Left line
+      doc.line(190, 145, 190, 155); // Right line
+      doc.line(20, 155, 190, 155); // Bottom line
+      
+      // Draw vertical lines for subject columns
+      doc.line(70, 145, 70, 155); // First column divider
+      doc.line(120, 145, 120, 155); // Second column divider
+      doc.line(150, 145, 150, 155); // Third column divider
+      
+      // Subject table headers
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text('Subject', 45, 150, { align: 'center' });
+      doc.text('Date', 95, 150, { align: 'center' });
+      doc.text('Time', 135, 150, { align: 'center' });
+      doc.text('Venue', 170, 150, { align: 'center' });
+      
+      let yPos = 160;
+      studentTicket.subjects.forEach((subject, index) => {
+        if (yPos > 250) {
+          doc.addPage();
+          doc.setDrawColor(0, 0, 0);
+          doc.setLineWidth(0.5);
+          doc.rect(10, 10, 190, 277);
+          yPos = 20;
+        }
+        
+        // Draw subject row
+        doc.line(20, yPos, 190, yPos); // Top line
+        doc.line(20, yPos, 20, yPos + 10); // Left line
+        doc.line(190, yPos, 190, yPos + 10); // Right line
+        doc.line(20, yPos + 10, 190, yPos + 10); // Bottom line
+        
+        // Draw vertical lines
+        doc.line(70, yPos, 70, yPos + 10);
+        doc.line(120, yPos, 120, yPos + 10);
+        doc.line(150, yPos, 150, yPos + 10);
+        
+        // Subject content
+        doc.setFont(undefined, 'normal');
+        doc.text(subject.name, 45, yPos + 5, { align: 'center' });
+        doc.text(subject.date, 95, yPos + 5, { align: 'center' });
+        doc.text(subject.time, 135, yPos + 5, { align: 'center' });
+        doc.text(subject.venue, 170, yPos + 5, { align: 'center' });
+        
+        yPos += 12; // Reduced spacing between rows
+      });
+      
+      // Important Instructions
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text('IMPORTANT INSTRUCTIONS', 20, yPos + 15);
+      
+      const instructions = [
+        '1. Bring this hall ticket to the examination hall',
+        '2. Carry a valid ID proof',
+        '3. Arrive 30 minutes before the exam',
+        '4. Follow all examination rules and regulations',
+        '5. No electronic devices allowed in the examination hall',
+        '6. Maintain silence and discipline during the exam'
+      ];
+      
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      instructions.forEach((instruction, index) => {
+        if (yPos + 30 + (index * 10) > 270) {
+          doc.addPage();
+          doc.setDrawColor(0, 0, 0);
+          doc.setLineWidth(0.5);
+          doc.rect(10, 10, 190, 277);
+          yPos = 20;
+        }
+        doc.text(instruction, 20, yPos + 25 + (index * 10));
+      });
+    } else {
+      doc.setFontSize(10);
+      doc.setTextColor(255, 0, 0);
+      doc.text('No Hall Ticket Available', 105, 120, { align: 'center' });
     }
+    
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('This is a computer-generated document. No signature required.', 105, 280, { align: 'center' });
+    
+    const filename = `hall-ticket-${student.rollNumber}.pdf`;
+    doc.save(filename);
   };
 
-  // Edit student functions
-  const handleEditStudent = (student) => {
-    setEditingStudent(student);
-    setEditDialogOpen(true);
+  const handleDownloadBulk = () => {
+    const doc = new jsPDF();
+    
+    students.forEach((student, index) => {
+      if (index > 0) {
+        doc.addPage();
+      }
+      
+      // Add border around the entire page
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(10, 10, 190, 277);
+      
+      const studentTicket = hallTickets.find(ticket => ticket.studentRollNumber === student.rollNumber);
+      
+      // College Header with better styling
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'bold');
+      doc.text('SOLAMALAI COLLEGE OF ENGINEERING', 105, 20, { align: 'center' });
+      
+      // College Address
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text('MADURAI - 625020', 105, 27, { align: 'center' });
+      
+      // Hall Ticket Title with underline
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('HALL TICKET', 105, 40, { align: 'center' });
+      doc.setDrawColor(0, 0, 0);
+      doc.line(80, 42, 130, 42);
+      
+      // Generation Date with better formatting
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 50, { align: 'center' });
+      
+      // Student Details Section
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text('STUDENT DETAILS', 20, 65);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(9);
+      doc.text(`Name: ${student.name}`, 20, 75);
+      doc.text(`Roll Number: ${student.rollNumber}`, 20, 85);
+      doc.text(`Department: ${student.department}`, 20, 95);
+      
+      if (studentTicket) {
+        // Exam Details Section in table format
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('EXAM DETAILS', 20, 115);
+        
+        // Draw table header
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.2);
+        doc.line(20, 120, 190, 120); // Top line
+        doc.line(20, 120, 20, 130); // Left line
+        doc.line(190, 120, 190, 130); // Right line
+        doc.line(20, 130, 190, 130); // Bottom line
+        
+        // Draw vertical lines for columns
+        doc.line(70, 120, 70, 130); // First column divider
+        doc.line(120, 120, 120, 130); // Second column divider
+        
+        // Table headers
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text('Exam Name', 45, 125, { align: 'center' });
+        doc.text('Date', 95, 125, { align: 'center' });
+        doc.text('Status', 155, 125, { align: 'center' });
+        
+        // Table content
+        doc.setFont(undefined, 'normal');
+        doc.text(studentTicket.examName, 45, 128, { align: 'center' });
+        doc.text(studentTicket.examDate, 95, 128, { align: 'center' });
+        doc.text(studentTicket.status, 155, 128, { align: 'center' });
+        
+        // Subjects Section
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('SUBJECTS', 20, 140);
+        
+        // Draw table header for subjects
+        doc.line(20, 145, 190, 145); // Top line
+        doc.line(20, 145, 20, 155); // Left line
+        doc.line(190, 145, 190, 155); // Right line
+        doc.line(20, 155, 190, 155); // Bottom line
+        
+        // Draw vertical lines for subject columns
+        doc.line(70, 145, 70, 155); // First column divider
+        doc.line(120, 145, 120, 155); // Second column divider
+        doc.line(150, 145, 150, 155); // Third column divider
+        
+        // Subject table headers
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text('Subject', 45, 150, { align: 'center' });
+        doc.text('Date', 95, 150, { align: 'center' });
+        doc.text('Time', 135, 150, { align: 'center' });
+        doc.text('Venue', 170, 150, { align: 'center' });
+        
+        let yPos = 160;
+        studentTicket.subjects.forEach((subject, subIndex) => {
+          if (yPos > 250) {
+            doc.addPage();
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.5);
+            doc.rect(10, 10, 190, 277);
+            yPos = 20;
+          }
+          
+          // Draw subject row
+          doc.line(20, yPos, 190, yPos); // Top line
+          doc.line(20, yPos, 20, yPos + 10); // Left line
+          doc.line(190, yPos, 190, yPos + 10); // Right line
+          doc.line(20, yPos + 10, 190, yPos + 10); // Bottom line
+          
+          // Draw vertical lines
+          doc.line(70, yPos, 70, yPos + 10);
+          doc.line(120, yPos, 120, yPos + 10);
+          doc.line(150, yPos, 150, yPos + 10);
+          
+          // Subject content
+          doc.setFont(undefined, 'normal');
+          doc.text(subject.name, 45, yPos + 5, { align: 'center' });
+          doc.text(subject.date, 95, yPos + 5, { align: 'center' });
+          doc.text(subject.time, 135, yPos + 5, { align: 'center' });
+          doc.text(subject.venue, 170, yPos + 5, { align: 'center' });
+          
+          yPos += 12; // Reduced spacing between rows
+        });
+        
+        // Important Instructions
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('IMPORTANT INSTRUCTIONS', 20, yPos + 15);
+        
+        const instructions = [
+          '1. Bring this hall ticket to the examination hall',
+          '2. Carry a valid ID proof',
+          '3. Arrive 30 minutes before the exam',
+          '4. Follow all examination rules and regulations',
+          '5. No electronic devices allowed in the examination hall',
+          '6. Maintain silence and discipline during the exam'
+        ];
+        
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        instructions.forEach((instruction, instIndex) => {
+          if (yPos + 30 + (instIndex * 10) > 270) {
+            doc.addPage();
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.5);
+            doc.rect(10, 10, 190, 277);
+            yPos = 20;
+          }
+          doc.text(instruction, 20, yPos + 25 + (instIndex * 10));
+        });
+      } else {
+        doc.setFontSize(10);
+        doc.setTextColor(255, 0, 0);
+        doc.text('No Hall Ticket Available', 105, 120, { align: 'center' });
+      }
+      
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text('This is a computer-generated document. No signature required.', 105, 280, { align: 'center' });
+      
+      // Add page number
+      doc.setFontSize(8);
+      doc.text(`Page ${index + 1} of ${students.length}`, 105, 290, { align: 'center' });
+    });
+    
+    const filename = `all-hall-tickets-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
   };
 
-  const handleUpdateStudent = () => {
-    if (editingStudent) {
-      const updatedStudents = students.map(student => 
-        student.id === editingStudent.id ? editingStudent : student
-      );
-      setStudents(updatedStudents);
-      // Update localStorage
-      localStorage.setItem('students', JSON.stringify(updatedStudents));
-      setEditDialogOpen(false);
-      setEditingStudent(null);
-    }
+  const handleExpandClick = (studentId) => {
+    setExpandedStudents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(studentId)) {
+        newSet.delete(studentId);
+      } else {
+        newSet.add(studentId);
+      }
+      return newSet;
+    });
   };
 
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
+  const filteredStudents = students.filter(student => 
+    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.department.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleOpenDialog = (type, index = -1) => {
-    setDialogType(type);
-    setEditingIndex(index);
-    setNewValue(index >= 0 ? dropdownValues[type][index] : '');
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setNewValue('');
-    setEditingIndex(-1);
-  };
-
-  const handleAddValue = () => {
-    if (newValue.trim()) {
-      setDropdownValues(prev => ({
-        ...prev,
-        [dialogType]: editingIndex >= 0 
-          ? prev[dialogType].map((item, index) => index === editingIndex ? newValue : item)
-          : [...prev[dialogType], newValue]
-      }));
-      handleCloseDialog();
-    }
-  };
-
-  const handleDeleteValue = (type, index) => {
-    setDropdownValues(prev => ({
-      ...prev,
-      [type]: prev[type].filter((_, i) => i !== index)
-    }));
-  };
+  const paginatedStudents = filteredStudents.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const drawer = (
     <div>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-        <Typography variant="h6" noWrap component="div">
+      <Box sx={{ 
+        p: 3, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#1976D2',
+        color: 'white',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <Typography variant="h6" noWrap component="div" sx={{ 
+          fontWeight: 'bold',
+          color: 'white',
+          fontSize: '1.2rem'
+        }}>
           Admin Panel
         </Typography>
       </Box>
       <Divider />
-      <List>
+      <List sx={{ backgroundColor: '#1565C0', color: 'white' }}>
         <ListItem 
           button 
-          selected={activeTab === 0}
+          selected={true}
           onClick={() => {
-            setActiveTab(0);
             if (isMobile) handleDrawerToggle();
           }}
+          sx={{
+            backgroundColor: '#2196F3',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: '#42A5F5',
+            },
+            '&.Mui-selected': {
+              backgroundColor: '#2196F3',
+              '&:hover': {
+                backgroundColor: '#42A5F5',
+              },
+            },
+            mb: 1,
+            borderRadius: '8px',
+            mx: 2,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            borderLeft: '4px solid #FFFFFF',
+          }}
         >
-          <ListItemIcon>
+          <ListItemIcon sx={{ color: 'white' }}>
             <SchoolIcon />
           </ListItemIcon>
-          <ListItemText primary="Exams" />
-        </ListItem>
-        <ListItem 
-          button 
-          selected={activeTab === 1}
-          onClick={() => {
-            setActiveTab(1);
-            if (isMobile) handleDrawerToggle();
-          }}
-        >
-          <ListItemIcon>
-            <PeopleIcon />
-          </ListItemIcon>
-          <ListItemText primary="Students" />
-        </ListItem>
-      </List>
-      <Divider />
-      <List>
-        <ListItem button onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
+          <ListItemText 
+            primary="Hall Tickets" 
+            primaryTypographyProps={{
+              style: { 
+                color: 'white', 
+                fontWeight: 'bold',
+                fontSize: '1rem'
+              }
+            }}
+          />
         </ListItem>
       </List>
     </div>
   );
 
-  const renderDropdownSection = (title, type) => (
-    <Paper sx={{ p: 3, mb: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">{title}</Typography>
-        <Button
-          startIcon={<AddIcon />}
-          variant="contained"
-          onClick={() => handleOpenDialog(type)}
-        >
-          Add New
-        </Button>
-      </Box>
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Value</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {dropdownValues[type].map((value, index) => (
-              <TableRow key={index}>
-                <TableCell>{value}</TableCell>
-                <TableCell align="right">
-                  <IconButton 
-                    onClick={() => handleOpenDialog(type, index)}
-                    sx={{ mr: 1 }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton 
-                    onClick={() => handleDeleteValue(type, index)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Paper>
-  );
-
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -372,8 +556,10 @@ const AdminDashboard = () => {
             '& .MuiDrawer-paper': { 
               boxSizing: 'border-box', 
               width: drawerWidth,
-              backgroundColor: theme.palette.background.default,
+              backgroundColor: '#1565C0',
               mt: 8,
+              boxShadow: 2,
+              borderRight: 'none',
             },
           }}
         >
@@ -389,346 +575,253 @@ const AdminDashboard = () => {
           mt: 8,
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5">
-            {activeTab === 0 ? 'Exams Management' : 'Students Management'}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 4,
+          backgroundColor: 'white',
+          p: 3,
+          borderRadius: 2,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        }}>
+          <Typography variant="h5" sx={{ 
+            fontWeight: 'bold', 
+            color: theme.palette.primary.main,
+            background: 'linear-gradient(45deg, #1976D2 30%, #2196F3 90%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
+            Hall Tickets Management
           </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => activeTab === 0 ? setAddExamDialog(true) : setAddStudentDialog(true)}
-          >
-            Add {activeTab === 0 ? 'Exam' : 'Student'}
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Paper
+              component="form"
+              sx={{ 
+                p: '2px 4px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                width: 300,
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              }}
+            >
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: theme.palette.primary.main }} />
+              </InputAdornment>
+              <TextField
+                fullWidth
+                placeholder="Search students..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                variant="standard"
+                sx={{ ml: 1, flex: 1 }}
+                InputProps={{ disableUnderline: true }}
+              />
+            </Paper>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<DownloadIcon />}
+              onClick={handleDownloadBulk}
+              sx={{ 
+                borderRadius: 2,
+                textTransform: 'none',
+                px: 3,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              }}
+            >
+              Download All
+            </Button>
+          </Box>
         </Box>
 
-        {activeTab === 0 && (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Exam Name</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {exams.map((exam) => (
-                  <TableRow key={exam.id}>
-                    <TableCell>{exam.name}</TableCell>
-                    <TableCell>{exam.date}</TableCell>
-                    <TableCell>{exam.type}</TableCell>
-                    <TableCell>{exam.status}</TableCell>
-                    <TableCell>
+        <Grid container spacing={3}>
+          {paginatedStudents.map((student) => {
+            const studentTicket = hallTickets.find(ticket => ticket.studentRollNumber === student.rollNumber);
+            const isExpanded = expandedStudents.has(student.id);
+            
+            return (
+              <Grid item xs={12} key={student.id}>
+                <Card 
+                  sx={{ 
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                    },
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Avatar 
+                        sx={{ 
+                          bgcolor: theme.palette.primary.main,
+                          mr: 2,
+                          width: 56,
+                          height: 56,
+                          fontSize: '1.5rem',
+                        }}
+                      >
+                        {student.name.charAt(0)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                          {student.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {student.rollNumber}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Stack spacing={1} sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <ClassIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                        <Typography variant="body2">{student.department}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <EmailIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                        <Typography variant="body2">{student.email}</Typography>
+                      </Box>
+                    </Stack>
+
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                      Hall Ticket:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {studentTicket ? (
+                        <>
+                          <Chip 
+                            label={studentTicket.examName}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            icon={<AssignmentIcon />}
+                            sx={{ borderRadius: 1 }}
+                          />
+                          <Chip 
+                            label={studentTicket.status}
+                            size="small"
+                            color={studentTicket.status === 'Available' ? 'success' : 'warning'}
+                            variant="outlined"
+                            sx={{ borderRadius: 1 }}
+                          />
+                        </>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          No hall ticket available
+                        </Typography>
+                      )}
+                    </Box>
+
+                    {studentTicket && (
+                      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                        <Box sx={{ mt: 2 }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            Exam Details:
+                          </Typography>
+                          <TableContainer 
+                            component={Paper} 
+                            variant="outlined"
+                            sx={{ borderRadius: 2 }}
+                          >
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Subject</TableCell>
+                                  <TableCell>Date</TableCell>
+                                  <TableCell>Time</TableCell>
+                                  <TableCell>Venue</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {studentTicket.subjects.map((subject, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>{subject.name}</TableCell>
+                                    <TableCell>{subject.date}</TableCell>
+                                    <TableCell>{subject.time}</TableCell>
+                                    <TableCell>{subject.venue}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Box>
+                      </Collapse>
+                    )}
+                  </CardContent>
+                  <CardActions sx={{ justifyContent: 'space-between', p: 2 }}>
+                    {studentTicket && (
+                      <Button
+                        size="small"
+                        onClick={() => handleExpandClick(student.id)}
+                        endIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        sx={{ 
+                          color: theme.palette.primary.main,
+                          '&:hover': {
+                            backgroundColor: theme.palette.primary.light,
+                            color: 'white',
+                          },
+                        }}
+                      >
+                        {isExpanded ? 'Show Less' : 'View More'}
+                      </Button>
+                    )}
+                    <Tooltip title="Download Hall Ticket">
                       <IconButton 
                         color="primary"
-                        onClick={() => handleEditExam(exam)}
+                        onClick={() => handleDownloadIndividual(student)}
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: theme.palette.primary.light,
+                            color: 'white',
+                          },
+                        }}
                       >
-                        <EditIcon />
+                        <DownloadIcon />
                       </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteExam(exam.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+                    </Tooltip>
+                  </CardActions>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
 
-        {activeTab === 1 && (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Roll Number</TableCell>
-                  <TableCell>Department</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {students.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>{student.name}</TableCell>
-                    <TableCell>{student.rollNumber}</TableCell>
-                    <TableCell>{student.department}</TableCell>
-                    <TableCell>{student.email}</TableCell>
-                    <TableCell>
-                      <IconButton 
-                        color="primary"
-                        onClick={() => handleEditStudent(student)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteStudent(student.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Pagination
+            count={Math.ceil(filteredStudents.length / itemsPerPage)}
+            page={currentPage}
+            onChange={(event, value) => setCurrentPage(value)}
+            color="primary"
+            sx={{
+              '& .MuiPaginationItem-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+        </Box>
 
-        {/* Add Exam Dialog */}
-        <Dialog open={addExamDialog} onClose={() => setAddExamDialog(false)}>
-          <DialogTitle>Add New Exam</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Exam Name"
-                  value={newExam.name}
-                  onChange={(e) => setNewExam({ ...newExam, name: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Date"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={newExam.date}
-                  onChange={(e) => setNewExam({ ...newExam, date: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Type"
-                  value={newExam.type}
-                  onChange={(e) => setNewExam({ ...newExam, type: e.target.value })}
-                >
-                  {dropdownValues.examTypes.map((type) => (
-                    <MenuItem key={type} value={type}>{type}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Status"
-                  value={newExam.status}
-                  onChange={(e) => setNewExam({ ...newExam, status: e.target.value })}
-                >
-                  {dropdownValues.examStatus.map((status) => (
-                    <MenuItem key={status} value={status}>{status}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setAddExamDialog(false)}>Cancel</Button>
-            <Button onClick={handleAddExam} variant="contained">
-              Save
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Add Student Dialog */}
-        <Dialog open={addStudentDialog} onClose={() => setAddStudentDialog(false)}>
-          <DialogTitle>Add New Student</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Name"
-                  value={newStudent.name}
-                  onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Roll Number"
-                  value={newStudent.rollNumber}
-                  onChange={(e) => setNewStudent({ ...newStudent, rollNumber: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Department"
-                  value={newStudent.department}
-                  onChange={(e) => setNewStudent({ ...newStudent, department: e.target.value })}
-                >
-                  {dropdownValues.departments.map((dept) => (
-                    <MenuItem key={dept} value={dept}>{dept}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  value={newStudent.email}
-                  onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setAddStudentDialog(false)}>Cancel</Button>
-            <Button onClick={handleAddStudent} variant="contained">
-              Save
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Edit Dialog for Exams */}
-        <Dialog open={editDialogOpen && editingExam !== null} onClose={() => setEditDialogOpen(false)}>
-          <DialogTitle>Edit Exam</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Exam Name"
-                  value={editingExam?.name || ''}
-                  onChange={(e) => setEditingExam({ ...editingExam, name: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Date"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={editingExam?.date || ''}
-                  onChange={(e) => setEditingExam({ ...editingExam, date: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Type"
-                  value={editingExam?.type || ''}
-                  onChange={(e) => setEditingExam({ ...editingExam, type: e.target.value })}
-                >
-                  {dropdownValues.examTypes.map((type) => (
-                    <MenuItem key={type} value={type}>{type}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Status"
-                  value={editingExam?.status || ''}
-                  onChange={(e) => setEditingExam({ ...editingExam, status: e.target.value })}
-                >
-                  {dropdownValues.examStatus.map((status) => (
-                    <MenuItem key={status} value={status}>{status}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpdateExam} variant="contained">
-              Update
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Edit Dialog for Students */}
-        <Dialog open={editDialogOpen && editingStudent !== null} onClose={() => setEditDialogOpen(false)}>
-          <DialogTitle>Edit Student</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Name"
-                  value={editingStudent?.name || ''}
-                  onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Roll Number"
-                  value={editingStudent?.rollNumber || ''}
-                  onChange={(e) => setEditingStudent({ ...editingStudent, rollNumber: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Department"
-                  value={editingStudent?.department || ''}
-                  onChange={(e) => setEditingStudent({ ...editingStudent, department: e.target.value })}
-                >
-                  {dropdownValues.departments.map((dept) => (
-                    <MenuItem key={dept} value={dept}>{dept}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  value={editingStudent?.email || ''}
-                  onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpdateStudent} variant="contained">
-              Update
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog open={openDialog} onClose={handleCloseDialog}>
-          <DialogTitle>
-            {editingIndex >= 0 ? 'Edit' : 'Add New'} {dialogType.replace(/([A-Z])/g, ' $1').trim()}
-          </DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Value"
-              fullWidth
-              variant="outlined"
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={handleAddValue} variant="contained">
-              {editingIndex >= 0 ? 'Save' : 'Add'}
-            </Button>
-          </DialogActions>
-        </Dialog>
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={handleCloseSnackbar} 
+            severity={snackbar.severity}
+            sx={{ width: '100%', borderRadius: 2 }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </Box>
   );
