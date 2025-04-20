@@ -905,4 +905,6 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+// Fix for linter error
+const AdminDashboardComponent = AdminDashboard;
+export default AdminDashboardComponent;
