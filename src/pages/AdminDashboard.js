@@ -35,8 +35,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Select,
-  MenuItem,
   AppBar,
   Toolbar,
 } from '@mui/material';
@@ -72,8 +70,7 @@ const AdminDashboard = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const itemsPerPage = 6;
   const [expandedStudents, setExpandedStudents] = useState(new Set());
-  const [departments, setDepartments] = useState([]);
-
+  
   useEffect(() => {
     const adminData = JSON.parse(localStorage.getItem('currentAdmin'));
     if (!adminData) {
@@ -92,9 +89,6 @@ const AdminDashboard = () => {
     setStudents(storedStudents);
     setHallTickets(storedHallTickets);
     setSelectedDepartment(location.state.selectedDepartment);
-
-    const uniqueDepartments = [...new Set(storedStudents.map(student => student.department))];
-    setDepartments(uniqueDepartments);
   }, [navigate, location]);
 
   const handleDrawerToggle = () => {
@@ -442,11 +436,11 @@ const AdminDashboard = () => {
   };
 
   const filteredStudents = students.filter(student => {
-    const matchesDepartment = !selectedDepartment || student.department === selectedDepartment;
     const matchesSearch = !searchTerm || 
       student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesDepartment && matchesSearch;
+    const matchesDepartment = !selectedDepartment || student.department === selectedDepartment;
+    return matchesSearch && matchesDepartment;
   });
 
   const paginatedStudents = filteredStudents.slice(
@@ -531,7 +525,7 @@ const AdminDashboard = () => {
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Admin Dashboard - {selectedDepartment}
+            Admin Dashboard
           </Typography>
           <IconButton color="inherit" onClick={handleLogout}>
             <LogoutIcon />
@@ -600,20 +594,6 @@ const AdminDashboard = () => {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Box sx={{ mr: 2 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>Department:</Typography>
-            <Select
-              size="small"
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              sx={{ minWidth: 200 }}
-            >
-              <MenuItem value="">All Departments</MenuItem>
-              {departments.map((dept) => (
-                <MenuItem key={dept} value={dept}>{dept}</MenuItem>
-              ))}
-            </Select>
-          </Box>
             <Paper
               component="form"
               sx={{ 
@@ -656,161 +636,195 @@ const AdminDashboard = () => {
         </Box>
 
         <Grid container spacing={3}>
-          {paginatedStudents.map((student) => {
-            const studentTicket = hallTickets.find(ticket => ticket.studentRollNumber === student.rollNumber);
-            const isExpanded = expandedStudents.has(student.id);
-            
-            return (
-              <Grid item xs={12} key={student.id}>
-                <Card 
-                  sx={{ 
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                    },
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Avatar 
-                        sx={{ 
-                          bgcolor: theme.palette.primary.main,
-                          mr: 2,
-                          width: 56,
-                          height: 56,
-                          fontSize: '1.5rem',
-                        }}
-                      >
-                        {student.name.charAt(0)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-                          {student.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {student.rollNumber}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    
-                    <Stack spacing={1} sx={{ mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <ClassIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                        <Typography variant="body2">{student.department}</Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <EmailIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                        <Typography variant="body2">{student.email}</Typography>
-                      </Box>
-                    </Stack>
-
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                      Hall Ticket:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {studentTicket ? (
-                        <>
-                          <Chip 
-                            label={studentTicket.examName}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                            icon={<AssignmentIcon />}
-                            sx={{ borderRadius: 1 }}
-                          />
-                          <Chip 
-                            label={studentTicket.status}
-                            size="small"
-                            color={studentTicket.status === 'Available' ? 'success' : 'warning'}
-                            variant="outlined"
-                            sx={{ borderRadius: 1 }}
-                          />
-                        </>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          No hall ticket available
-                        </Typography>
-                      )}
-                    </Box>
-
-                    {studentTicket && (
-                      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                            Exam Details:
+          {paginatedStudents.length > 0 ? (
+            paginatedStudents.map((student) => {
+              const studentTicket = hallTickets.find(ticket => ticket.studentRollNumber === student.rollNumber);
+              const isExpanded = expandedStudents.has(student.id);
+              
+              return (
+                <Grid item xs={12} key={student.id}>
+                  <Card 
+                    sx={{ 
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                      },
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Avatar 
+                          sx={{ 
+                            bgcolor: theme.palette.primary.main,
+                            mr: 2,
+                            width: 56,
+                            height: 56,
+                            fontSize: '1.5rem',
+                          }}
+                        >
+                          {student.name.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                            {student.name}
                           </Typography>
-                          <TableContainer 
-                            component={Paper} 
-                            variant="outlined"
-                            sx={{ borderRadius: 2 }}
-                          >
-                            <Table size="small">
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell>Subject</TableCell>
-                                  <TableCell>Date</TableCell>
-                                  <TableCell>Time</TableCell>
-                                  <TableCell>Venue</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {studentTicket.subjects.map((subject, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell>{subject.name}</TableCell>
-                                    <TableCell>{subject.date}</TableCell>
-                                    <TableCell>{subject.time}</TableCell>
-                                    <TableCell>{subject.venue}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
+                          <Typography variant="body2" color="text.secondary">
+                            {student.rollNumber}
+                          </Typography>
                         </Box>
-                      </Collapse>
-                    )}
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'space-between', p: 2 }}>
-                    {studentTicket && (
-                      <Button
-                        size="small"
-                        onClick={() => handleExpandClick(student.id)}
-                        endIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                        sx={{ 
-                          color: theme.palette.primary.main,
-                          '&:hover': {
-                            backgroundColor: theme.palette.primary.light,
-                            color: 'white',
-                          },
-                        }}
-                      >
-                        {isExpanded ? 'Show Less' : 'View More'}
-                      </Button>
-                    )}
-                    <Tooltip title="Download Hall Ticket">
-                      <IconButton 
-                        color="primary"
-                        onClick={() => handleDownloadIndividual(student)}
-                        sx={{
-                          '&:hover': {
-                            backgroundColor: theme.palette.primary.light,
-                            color: 'white',
-                          },
-                        }}
-                      >
-                        <DownloadIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </CardActions>
-                </Card>
-              </Grid>
-            );
-          })}
+                      </Box>
+                      
+                      <Stack spacing={1} sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <ClassIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                          <Typography variant="body2">{student.department}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <EmailIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                          <Typography variant="body2">{student.email}</Typography>
+                        </Box>
+                      </Stack>
+
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                        Hall Ticket:
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {studentTicket ? (
+                          <>
+                            <Chip 
+                              label={studentTicket.examName}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              icon={<AssignmentIcon />}
+                              sx={{ borderRadius: 1 }}
+                            />
+                            <Chip 
+                              label={studentTicket.status}
+                              size="small"
+                              color={studentTicket.status === 'Available' ? 'success' : 'warning'}
+                              variant="outlined"
+                              sx={{ borderRadius: 1 }}
+                            />
+                          </>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            No hall ticket available
+                          </Typography>
+                        )}
+                      </Box>
+
+                      {studentTicket && (
+                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                          <Box sx={{ mt: 2 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                              Exam Details:
+                            </Typography>
+                            <TableContainer 
+                              component={Paper} 
+                              variant="outlined"
+                              sx={{ borderRadius: 2 }}
+                            >
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell>Subject</TableCell>
+                                    <TableCell>Date</TableCell>
+                                    <TableCell>Time</TableCell>
+                                    <TableCell>Venue</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {studentTicket.subjects.map((subject, index) => (
+                                    <TableRow key={index}>
+                                      <TableCell>{subject.name}</TableCell>
+                                      <TableCell>{subject.date}</TableCell>
+                                      <TableCell>{subject.time}</TableCell>
+                                      <TableCell>{subject.venue}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </Box>
+                        </Collapse>
+                      )}
+                    </CardContent>
+                    <CardActions sx={{ justifyContent: 'space-between', p: 2 }}>
+                      {studentTicket && (
+                        <Button
+                          size="small"
+                          onClick={() => handleExpandClick(student.id)}
+                          endIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                          sx={{ 
+                            color: theme.palette.primary.main,
+                            '&:hover': {
+                              backgroundColor: theme.palette.primary.light,
+                              color: 'white',
+                            },
+                          }}
+                        >
+                          {isExpanded ? 'Show Less' : 'View More'}
+                        </Button>
+                      )}
+                      <Tooltip title="Download Hall Ticket">
+                        <IconButton 
+                          color="primary"
+                          onClick={() => handleDownloadIndividual(student)}
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: theme.palette.primary.light,
+                              color: 'white',
+                            },
+                          }}
+                        >
+                          <DownloadIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </CardActions>
+                  </Card>
+                </Grid>
+              );
+            })
+          ) : (
+            <Grid item xs={12}>
+              <Paper 
+                sx={{ 
+                  p: 4, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 2,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  backgroundColor: '#f9f9f9',
+                  minHeight: '200px'
+                }}
+              >
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No records found
+                </Typography>
+                <Typography variant="body2" color="text.secondary" align="center">
+                  There are no students in the {selectedDepartment} department.
+                </Typography>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  startIcon={<ArrowBackIcon />}
+                  onClick={handleBack}
+                  sx={{ mt: 2 }}
+                >
+                  Go Back
+                </Button>
+              </Paper>
+            </Grid>
+          )}
         </Grid>
 
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
