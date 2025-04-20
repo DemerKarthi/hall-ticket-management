@@ -35,6 +35,7 @@ import {
   ListItemSecondaryAction,
   MenuItem,
   Tooltip,
+  Alert,
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -44,9 +45,11 @@ import {
   School as SchoolIcon,
   People as PeopleIcon,
   AdminPanelSettings as AdminIcon,
+  Menu as MenuIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
+import studentData from '../helpers/studentData';
 import { jsPDF } from 'jspdf';
-import { studentData } from '../helpers/studentData';
 
 const drawerWidth = 240;
 
@@ -75,7 +78,7 @@ const StaffDashboard = () => {
     }
   ]);
 
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState(studentData);
 
   const [newExam, setNewExam] = useState({
     name: '',
@@ -129,13 +132,12 @@ const StaffDashboard = () => {
   }, [navigate]);
 
   useEffect(() => {
-    // Initialize students data in localStorage if not present
-    const storedStudents = JSON.parse(localStorage.getItem('students'));
-    if (!storedStudents || storedStudents.length === 0) {
-      localStorage.setItem('students', JSON.stringify(studentData));
-      setStudents(studentData);
-    } else {
-      setStudents(storedStudents);
+    // Get current staff's department
+    const currentStaff = JSON.parse(localStorage.getItem('currentStaff'));
+    if (currentStaff) {
+      // Filter students based on staff's department
+      const departmentStudents = studentData.filter(student => student.department === currentStaff.department);
+      setStudents(departmentStudents);
     }
   }, []);
 

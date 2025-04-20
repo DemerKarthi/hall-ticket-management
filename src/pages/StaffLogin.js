@@ -1,16 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Person as StaffIcon } from '@mui/icons-material';
 import BaseLogin from './BaseLogin';
+import staffData from '../helpers/staffData';
 
 const StaffLogin = () => {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Initialize staff data in localStorage
+    localStorage.setItem('staff', JSON.stringify(staffData));
+  }, []);
+
   const handleLogin = (formData) => {
     try {
       // Get staff data from localStorage
-      const staffData = localStorage.getItem('staff');
-      const staff = JSON.parse(staffData || '[]');
+      const storedStaffData = localStorage.getItem('staff');
+      const staff = JSON.parse(storedStaffData || '[]');
       
       // Find the staff with matching username and password
       const staffMember = staff.find(s => 
@@ -42,4 +48,4 @@ const StaffLogin = () => {
   );
 };
 
-export default StaffLogin; 
+export default StaffLogin;

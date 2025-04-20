@@ -10,7 +10,7 @@ import {
   Alert,
 } from '@mui/material';
 import { School as StudentIcon } from '@mui/icons-material';
-import { studentData } from '../helpers/studentData';
+import studentData from '../helpers/studentData';
 
 const StudentLogin = () => {
   const navigate = useNavigate();

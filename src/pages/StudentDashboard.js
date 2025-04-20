@@ -43,6 +43,7 @@ import {
   LocationOn as LocationIcon,
   AccessTime as TimeIcon,
 } from '@mui/icons-material';
+import studentData from '../helpers/studentData';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -53,12 +54,23 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     // Check if student is logged in
-    const studentData = localStorage.getItem('currentStudent');
-    if (!studentData) {
+    const currentStudent = localStorage.getItem('currentStudent');
+    if (!currentStudent) {
       navigate('/student-login');
       return;
     }
-    setStudent(JSON.parse(studentData));
+    const parsedStudent = JSON.parse(currentStudent);
+    
+    // Get student details from studentData
+    const studentDetails = studentData.find(s => s.rollNumber === parsedStudent.rollNumber);
+    if (studentDetails) {
+      setStudent({
+        ...parsedStudent,
+        ...studentDetails
+      });
+    } else {
+      setStudent(parsedStudent);
+    }
   }, [navigate]);
 
   const handleLogout = () => {
@@ -391,4 +403,4 @@ const StudentDashboard = () => {
   );
 };
 
-export default StudentDashboard; 
+export default StudentDashboard;

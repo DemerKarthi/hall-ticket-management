@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -35,6 +35,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Select,
+  MenuItem,
+  AppBar,
+  Toolbar,
 } from '@mui/material';
 import { 
   Logout as LogoutIcon,
@@ -47,6 +51,7 @@ import {
   Assignment as AssignmentIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -55,6 +60,7 @@ const drawerWidth = 240;
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -62,25 +68,34 @@ const AdminDashboard = () => {
   const [hallTickets, setHallTickets] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const itemsPerPage = 6;
   const [expandedStudents, setExpandedStudents] = useState(new Set());
+  const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
     const adminData = JSON.parse(localStorage.getItem('currentAdmin'));
     if (!adminData) {
       navigate('/admin-login');
+      return;
+    }
+
+    if (!location.state?.selectedDepartment) {
+      navigate('/department-selection');
+      return;
     }
 
     const storedStudents = JSON.parse(localStorage.getItem('students')) || [];
     const storedHallTickets = JSON.parse(localStorage.getItem('hallTickets')) || [];
     
-    console.log('Loaded Students:', storedStudents);
-    console.log('Loaded Hall Tickets:', storedHallTickets);
-    
     setStudents(storedStudents);
     setHallTickets(storedHallTickets);
-  }, [navigate]);
+    setSelectedDepartment(location.state.selectedDepartment);
+
+    const uniqueDepartments = [...new Set(storedStudents.map(student => student.department))];
+    setDepartments(uniqueDepartments);
+  }, [navigate, location]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -89,6 +104,10 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('currentAdmin');
     navigate('/');
+  };
+
+  const handleBack = () => {
+    navigate('/department-selection');
   };
 
   const showSnackbar = (message, severity) => {
@@ -102,38 +121,31 @@ const AdminDashboard = () => {
   const handleDownloadIndividual = (student) => {
     const doc = new jsPDF();
     
-    // Set page size to A4
     doc.setPage(1);
     
-    // Add border around the entire page
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.5);
     doc.rect(10, 10, 190, 277);
     
-    // College Header with better styling
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
     doc.setFont(undefined, 'bold');
     doc.text('SOLAMALAI COLLEGE OF ENGINEERING', 105, 20, { align: 'center' });
     
-    // College Address
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.text('MADURAI - 625020', 105, 27, { align: 'center' });
     
-    // Hall Ticket Title with underline
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
     doc.text('HALL TICKET', 105, 40, { align: 'center' });
     doc.setDrawColor(0, 0, 0);
     doc.line(80, 42, 130, 42);
     
-    // Generation Date with better formatting
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 50, { align: 'center' });
     
-    // Student Details Section
     doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
     doc.text('STUDENT DETAILS', 20, 65);
@@ -146,53 +158,44 @@ const AdminDashboard = () => {
     const studentTicket = hallTickets.find(ticket => ticket.studentRollNumber === student.rollNumber);
     
     if (studentTicket) {
-      // Exam Details Section in table format
       doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
       doc.text('EXAM DETAILS', 20, 115);
       
-      // Draw table header
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.2);
-      doc.line(20, 120, 190, 120); // Top line
-      doc.line(20, 120, 20, 130); // Left line
-      doc.line(190, 120, 190, 130); // Right line
-      doc.line(20, 130, 190, 130); // Bottom line
+      doc.line(20, 120, 190, 120);
+      doc.line(20, 120, 20, 130);
+      doc.line(190, 120, 190, 130);
+      doc.line(20, 130, 190, 130);
       
-      // Draw vertical lines for columns
-      doc.line(70, 120, 70, 130); // First column divider
-      doc.line(120, 120, 120, 130); // Second column divider
+      doc.line(70, 120, 70, 130);
+      doc.line(120, 120, 120, 130);
       
-      // Table headers
       doc.setFontSize(9);
       doc.setFont(undefined, 'bold');
       doc.text('Exam Name', 45, 125, { align: 'center' });
       doc.text('Date', 95, 125, { align: 'center' });
       doc.text('Status', 155, 125, { align: 'center' });
       
-      // Table content
       doc.setFont(undefined, 'normal');
       doc.text(studentTicket.examName, 45, 128, { align: 'center' });
       doc.text(studentTicket.examDate, 95, 128, { align: 'center' });
       doc.text(studentTicket.status, 155, 128, { align: 'center' });
       
-      // Subjects Section
       doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
       doc.text('SUBJECTS', 20, 140);
       
-      // Draw table header for subjects
-      doc.line(20, 145, 190, 145); // Top line
-      doc.line(20, 145, 20, 155); // Left line
-      doc.line(190, 145, 190, 155); // Right line
-      doc.line(20, 155, 190, 155); // Bottom line
+      doc.line(20, 145, 190, 145);
+      doc.line(20, 145, 20, 155);
+      doc.line(190, 145, 190, 155);
+      doc.line(20, 155, 190, 155);
       
-      // Draw vertical lines for subject columns
-      doc.line(70, 145, 70, 155); // First column divider
-      doc.line(120, 145, 120, 155); // Second column divider
-      doc.line(150, 145, 150, 155); // Third column divider
+      doc.line(70, 145, 70, 155);
+      doc.line(120, 145, 120, 155);
+      doc.line(150, 145, 150, 155);
       
-      // Subject table headers
       doc.setFontSize(9);
       doc.setFont(undefined, 'bold');
       doc.text('Subject', 45, 150, { align: 'center' });
@@ -210,28 +213,24 @@ const AdminDashboard = () => {
           yPos = 20;
         }
         
-        // Draw subject row
-        doc.line(20, yPos, 190, yPos); // Top line
-        doc.line(20, yPos, 20, yPos + 10); // Left line
-        doc.line(190, yPos, 190, yPos + 10); // Right line
-        doc.line(20, yPos + 10, 190, yPos + 10); // Bottom line
+        doc.line(20, yPos, 190, yPos);
+        doc.line(20, yPos, 20, yPos + 10);
+        doc.line(190, yPos, 190, yPos + 10);
+        doc.line(20, yPos + 10, 190, yPos + 10);
         
-        // Draw vertical lines
         doc.line(70, yPos, 70, yPos + 10);
         doc.line(120, yPos, 120, yPos + 10);
         doc.line(150, yPos, 150, yPos + 10);
         
-        // Subject content
         doc.setFont(undefined, 'normal');
         doc.text(subject.name, 45, yPos + 5, { align: 'center' });
         doc.text(subject.date, 95, yPos + 5, { align: 'center' });
         doc.text(subject.time, 135, yPos + 5, { align: 'center' });
         doc.text(subject.venue, 170, yPos + 5, { align: 'center' });
         
-        yPos += 12; // Reduced spacing between rows
+        yPos += 12;
       });
       
-      // Important Instructions
       doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
       doc.text('IMPORTANT INSTRUCTIONS', 20, yPos + 15);
@@ -263,7 +262,6 @@ const AdminDashboard = () => {
       doc.text('No Hall Ticket Available', 105, 120, { align: 'center' });
     }
     
-    // Footer
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text('This is a computer-generated document. No signature required.', 105, 280, { align: 'center' });
@@ -280,37 +278,31 @@ const AdminDashboard = () => {
         doc.addPage();
       }
       
-      // Add border around the entire page
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.5);
       doc.rect(10, 10, 190, 277);
       
       const studentTicket = hallTickets.find(ticket => ticket.studentRollNumber === student.rollNumber);
       
-      // College Header with better styling
       doc.setFontSize(14);
       doc.setTextColor(0, 0, 0);
       doc.setFont(undefined, 'bold');
       doc.text('SOLAMALAI COLLEGE OF ENGINEERING', 105, 20, { align: 'center' });
       
-      // College Address
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
       doc.text('MADURAI - 625020', 105, 27, { align: 'center' });
       
-      // Hall Ticket Title with underline
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.text('HALL TICKET', 105, 40, { align: 'center' });
       doc.setDrawColor(0, 0, 0);
       doc.line(80, 42, 130, 42);
       
-      // Generation Date with better formatting
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 50, { align: 'center' });
       
-      // Student Details Section
       doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
       doc.text('STUDENT DETAILS', 20, 65);
@@ -321,53 +313,44 @@ const AdminDashboard = () => {
       doc.text(`Department: ${student.department}`, 20, 95);
       
       if (studentTicket) {
-        // Exam Details Section in table format
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         doc.text('EXAM DETAILS', 20, 115);
         
-        // Draw table header
         doc.setDrawColor(0, 0, 0);
         doc.setLineWidth(0.2);
-        doc.line(20, 120, 190, 120); // Top line
-        doc.line(20, 120, 20, 130); // Left line
-        doc.line(190, 120, 190, 130); // Right line
-        doc.line(20, 130, 190, 130); // Bottom line
+        doc.line(20, 120, 190, 120);
+        doc.line(20, 120, 20, 130);
+        doc.line(190, 120, 190, 130);
+        doc.line(20, 130, 190, 130);
         
-        // Draw vertical lines for columns
-        doc.line(70, 120, 70, 130); // First column divider
-        doc.line(120, 120, 120, 130); // Second column divider
+        doc.line(70, 120, 70, 130);
+        doc.line(120, 120, 120, 130);
         
-        // Table headers
         doc.setFontSize(9);
         doc.setFont(undefined, 'bold');
         doc.text('Exam Name', 45, 125, { align: 'center' });
         doc.text('Date', 95, 125, { align: 'center' });
         doc.text('Status', 155, 125, { align: 'center' });
         
-        // Table content
         doc.setFont(undefined, 'normal');
         doc.text(studentTicket.examName, 45, 128, { align: 'center' });
         doc.text(studentTicket.examDate, 95, 128, { align: 'center' });
         doc.text(studentTicket.status, 155, 128, { align: 'center' });
         
-        // Subjects Section
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         doc.text('SUBJECTS', 20, 140);
         
-        // Draw table header for subjects
-        doc.line(20, 145, 190, 145); // Top line
-        doc.line(20, 145, 20, 155); // Left line
-        doc.line(190, 145, 190, 155); // Right line
-        doc.line(20, 155, 190, 155); // Bottom line
+        doc.line(20, 145, 190, 145);
+        doc.line(20, 145, 20, 155);
+        doc.line(190, 145, 190, 155);
+        doc.line(20, 155, 190, 155);
         
-        // Draw vertical lines for subject columns
-        doc.line(70, 145, 70, 155); // First column divider
-        doc.line(120, 145, 120, 155); // Second column divider
-        doc.line(150, 145, 150, 155); // Third column divider
+        doc.line(70, 145, 70, 155);
+        doc.line(120, 145, 120, 155);
+        doc.line(150, 145, 150, 155);
         
-        // Subject table headers
         doc.setFontSize(9);
         doc.setFont(undefined, 'bold');
         doc.text('Subject', 45, 150, { align: 'center' });
@@ -385,28 +368,24 @@ const AdminDashboard = () => {
             yPos = 20;
           }
           
-          // Draw subject row
-          doc.line(20, yPos, 190, yPos); // Top line
-          doc.line(20, yPos, 20, yPos + 10); // Left line
-          doc.line(190, yPos, 190, yPos + 10); // Right line
-          doc.line(20, yPos + 10, 190, yPos + 10); // Bottom line
+          doc.line(20, yPos, 190, yPos);
+          doc.line(20, yPos, 20, yPos + 10);
+          doc.line(190, yPos, 190, yPos + 10);
+          doc.line(20, yPos + 10, 190, yPos + 10);
           
-          // Draw vertical lines
           doc.line(70, yPos, 70, yPos + 10);
           doc.line(120, yPos, 120, yPos + 10);
           doc.line(150, yPos, 150, yPos + 10);
           
-          // Subject content
           doc.setFont(undefined, 'normal');
           doc.text(subject.name, 45, yPos + 5, { align: 'center' });
           doc.text(subject.date, 95, yPos + 5, { align: 'center' });
           doc.text(subject.time, 135, yPos + 5, { align: 'center' });
           doc.text(subject.venue, 170, yPos + 5, { align: 'center' });
           
-          yPos += 12; // Reduced spacing between rows
+          yPos += 12;
         });
         
-        // Important Instructions
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         doc.text('IMPORTANT INSTRUCTIONS', 20, yPos + 15);
@@ -438,12 +417,10 @@ const AdminDashboard = () => {
         doc.text('No Hall Ticket Available', 105, 120, { align: 'center' });
       }
       
-      // Footer
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
       doc.text('This is a computer-generated document. No signature required.', 105, 280, { align: 'center' });
       
-      // Add page number
       doc.setFontSize(8);
       doc.text(`Page ${index + 1} of ${students.length}`, 105, 290, { align: 'center' });
     });
@@ -464,11 +441,13 @@ const AdminDashboard = () => {
     });
   };
 
-  const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.department.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students.filter(student => {
+    const matchesDepartment = !selectedDepartment || student.department === selectedDepartment;
+    const matchesSearch = !searchTerm || 
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesDepartment && matchesSearch;
+  });
 
   const paginatedStudents = filteredStudents.slice(
     (currentPage - 1) * itemsPerPage,
@@ -541,6 +520,24 @@ const AdminDashboard = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+      <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={handleBack}
+            sx={{ mr: 2 }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            Admin Dashboard - {selectedDepartment}
+          </Typography>
+          <IconButton color="inherit" onClick={handleLogout}>
+            <LogoutIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -585,16 +582,38 @@ const AdminDashboard = () => {
           borderRadius: 2,
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         }}>
-          <Typography variant="h5" sx={{ 
-            fontWeight: 'bold', 
-            color: theme.palette.primary.main,
-            background: 'linear-gradient(45deg, #1976D2 30%, #2196F3 90%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}>
-            Hall Tickets Management
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton
+              onClick={() => navigate('/department-selection')}
+              sx={{ mr: 1 }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="h5" sx={{ 
+              fontWeight: 'bold', 
+              color: theme.palette.primary.main,
+              background: 'linear-gradient(45deg, #1976D2 30%, #2196F3 90%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              Hall Tickets Management
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ mr: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Department:</Typography>
+            <Select
+              size="small"
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              sx={{ minWidth: 200 }}
+            >
+              <MenuItem value="">All Departments</MenuItem>
+              {departments.map((dept) => (
+                <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+              ))}
+            </Select>
+          </Box>
             <Paper
               component="form"
               sx={{ 
@@ -827,4 +846,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;

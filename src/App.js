@@ -2,12 +2,14 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { studentData } from './helpers/studentData';
+import studentData from './helpers/studentData';
 import Home from './pages/Home';
+import LoginSelection from './pages/LoginSelection';
 import AdminLogin from './pages/AdminLogin';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import StudentDashboard from './pages/StudentDashboard';
+import DepartmentSelection from './pages/DepartmentSelection';
 import CollegeHeader from './components/CollegeHeader';
 
 // Initialize data in localStorage
@@ -73,6 +75,7 @@ function App() {
             <Route path="/student-dashboard" element={<StudentDashboard />} />
             <Route path="/staff-dashboard" element={<StaffDashboard />} />
             <Route path="/hall-ticket/:id" element={<HallTicket />} />
+            <Route path="/department-selection" element={<DepartmentSelection />} />
           </Routes>
         </React.Suspense>
       </Router>
