@@ -34,6 +34,7 @@ import {
   Tab,
   ListItemSecondaryAction,
   MenuItem,
+  Tooltip,
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -45,6 +46,7 @@ import {
   AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
 import { jsPDF } from 'jspdf';
+import { studentData } from '../helpers/studentData';
 
 const drawerWidth = 240;
 
@@ -73,24 +75,7 @@ const StaffDashboard = () => {
     }
   ]);
 
-  const [students, setStudents] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      rollNumber: 'STU001',
-      department: 'Computer Science',
-      email: 'john@example.com',
-      hallTickets: [1]
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      rollNumber: 'STU002',
-      department: 'Electrical Engineering',
-      email: 'jane@example.com',
-      hallTickets: [2]
-    }
-  ]);
+  const [students, setStudents] = useState([]);
 
   const [newExam, setNewExam] = useState({
     name: '',
@@ -127,6 +112,13 @@ const StaffDashboard = () => {
   const [dialogType, setDialogType] = useState('');
   const [editingIndex, setEditingIndex] = useState(-1);
   const [newValue, setNewValue] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    rollNumber: '',
+    department: '',
+    email: '',
+  });
 
   useEffect(() => {
     // Check if staff is logged in
@@ -135,6 +127,17 @@ const StaffDashboard = () => {
       navigate('/staff-login');
     }
   }, [navigate]);
+
+  useEffect(() => {
+    // Initialize students data in localStorage if not present
+    const storedStudents = JSON.parse(localStorage.getItem('students'));
+    if (!storedStudents || storedStudents.length === 0) {
+      localStorage.setItem('students', JSON.stringify(studentData));
+      setStudents(studentData);
+    } else {
+      setStudents(storedStudents);
+    }
+  }, []);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -234,35 +237,90 @@ const StaffDashboard = () => {
     setActiveTab(newValue);
   };
 
-  const handleOpenDialog = (type, index = -1) => {
-    setDialogType(type);
-    setEditingIndex(index);
-    setNewValue(index >= 0 ? dropdownValues[type][index] : '');
+  const handleOpenDialog = (student = null) => {
+    if (student) {
+      setSelectedStudent(student);
+      setFormData({
+        name: student.name,
+        rollNumber: student.rollNumber,
+        department: student.department,
+        email: student.email,
+      });
+    } else {
+      setSelectedStudent(null);
+      setFormData({
+        name: '',
+        rollNumber: '',
+        department: '',
+        email: '',
+      });
+    }
     setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setNewValue('');
-    setEditingIndex(-1);
+    setSelectedStudent(null);
+    setFormData({
+      name: '',
+      rollNumber: '',
+      department: '',
+      email: '',
+    });
   };
 
-  const handleAddValue = () => {
-    if (newValue.trim()) {
-      setDropdownValues(prev => ({
-        ...prev,
-        [dialogType]: editingIndex >= 0 
-          ? prev[dialogType].map((item, index) => index === editingIndex ? newValue : item)
-          : [...prev[dialogType], newValue]
-      }));
-      handleCloseDialog();
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const updatedStudents = [...students];
+
+    if (selectedStudent) {
+      // Update existing student
+      const index = updatedStudents.findIndex(
+        (s) => s.rollNumber === selectedStudent.rollNumber
+      );
+      if (index !== -1) {
+        updatedStudents[index] = {
+          ...updatedStudents[index],
+          ...formData,
+        };
+      }
+    } else {
+      // Add new student
+      const newStudent = {
+        id: students.length + 1,
+        ...formData,
+        hallTickets: [],
+      };
+      updatedStudents.push(newStudent);
     }
+
+    setStudents(updatedStudents);
+    localStorage.setItem('students', JSON.stringify(updatedStudents));
+    handleCloseDialog();
+  };
+
+  const handleDelete = (rollNumber) => {
+    const updatedStudents = students.filter(
+      (student) => student.rollNumber !== rollNumber
+    );
+    setStudents(updatedStudents);
+    localStorage.setItem('students', JSON.stringify(updatedStudents));
   };
 
   const handleDeleteValue = (type, index) => {
+    const updatedValues = [...dropdownValues[type]];
+    updatedValues.splice(index, 1);
     setDropdownValues(prev => ({
       ...prev,
-      [type]: prev[type].filter((_, i) => i !== index)
+      [type]: updatedValues
     }));
   };
 
@@ -321,7 +379,7 @@ const StaffDashboard = () => {
         <Button
           startIcon={<AddIcon />}
           variant="contained"
-          onClick={() => handleOpenDialog(type)}
+          onClick={() => handleOpenDialog(null)}
         >
           Add New
         </Button>
@@ -340,7 +398,7 @@ const StaffDashboard = () => {
                 <TableCell>{value}</TableCell>
                 <TableCell align="right">
                   <IconButton 
-                    onClick={() => handleOpenDialog(type, index)}
+                    onClick={() => handleOpenDialog(null)}
                     sx={{ mr: 1 }}
                   >
                     <EditIcon />
@@ -461,24 +519,28 @@ const StaffDashboard = () => {
               </TableHead>
               <TableBody>
                 {students.map((student) => (
-                  <TableRow key={student.id}>
+                  <TableRow key={student.rollNumber}>
                     <TableCell>{student.name}</TableCell>
                     <TableCell>{student.rollNumber}</TableCell>
                     <TableCell>{student.department}</TableCell>
                     <TableCell>{student.email}</TableCell>
                     <TableCell>
-                      <IconButton 
-                        color="primary"
-                        onClick={() => handleEditStudent(student)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteStudent(student.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <Tooltip title="Edit">
+                        <IconButton
+                          color="primary"
+                          onClick={() => handleOpenDialog(student)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDelete(student.rollNumber)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -718,22 +780,54 @@ const StaffDashboard = () => {
         {/* Dropdown Values Dialog */}
         <Dialog open={openDialog} onClose={handleCloseDialog}>
           <DialogTitle>
-            {editingIndex >= 0 ? 'Edit Value' : 'Add New Value'}
+            {selectedStudent ? 'Edit Student' : 'Add New Student'}
           </DialogTitle>
           <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Value"
-              fullWidth
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-            />
+            <Box component="form" sx={{ mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                margin="normal"
+                required
+              />
+              <TextField
+                fullWidth
+                label="Roll Number"
+                name="rollNumber"
+                value={formData.rollNumber}
+                onChange={handleChange}
+                margin="normal"
+                required
+                disabled={!!selectedStudent}
+              />
+              <TextField
+                fullWidth
+                label="Department"
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                margin="normal"
+                required
+              />
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                margin="normal"
+                required
+              />
+            </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={handleAddValue} variant="contained">
-              {editingIndex >= 0 ? 'Update' : 'Add'}
+            <Button onClick={handleSubmit} variant="contained">
+              {selectedStudent ? 'Update' : 'Add'}
             </Button>
           </DialogActions>
         </Dialog>
