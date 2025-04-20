@@ -154,6 +154,7 @@ const StaffDashboard = () => {
         status: 'Pending',
         subjects: []
       });
+      setAddExamDialog(false);
     }
   };
 
@@ -174,6 +175,7 @@ const StaffDashboard = () => {
         email: '',
         hallTickets: []
       });
+      setAddStudentDialog(false);
     }
   };
 
